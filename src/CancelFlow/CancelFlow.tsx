@@ -1,13 +1,28 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { useCancelFlow } from "./useCancelFlow";
-import { Question } from "./components/Question";
-import { FinalComment } from "./components/FinalComment";
-import { FinalMessage } from "./components/FinalMessage";
-import { ProgressBar } from "./components/ProgressBar";
+import { motion } from 'framer-motion'
+import { useCancelFlow } from './useCancelFlow'
+import { Question } from './components/Question'
+import { FinalComment } from './components/FinalComment'
+import { FinalMessage } from './components/FinalMessage'
+import { ProgressBar } from './components/ProgressBar'
+
+/* map of answers that contradict each other */
+const contradictions: Record<string, string[]> = {
+  'Not useful right now': ['Easy to use'],
+  'Didn’t see the value': ['Good value'],
+  'Poor support': ['Helpful support'],
+  'Missing features / hard to use': ['Easy to use'],
+}
 
 export const CancelFlow: React.FC = () => {
-  const { current, progress, select, reset, feedback } = useCancelFlow();
+  const { current, feedback, progress, select, reset } = useCancelFlow()
+
+  const filtered =
+    current.kind === 'question'
+      ? current.options.filter(opt => {
+          const reason = feedback.reason
+          return !(reason && contradictions[reason]?.includes(opt))
+        })
+      : []
 
   return (
     <motion.div
@@ -18,22 +33,26 @@ export const CancelFlow: React.FC = () => {
     >
       {progress.total > 1 && <ProgressBar {...progress} />}
 
-      {current.kind === "question" && (
-        <Question step={progress.current} {...current} onSelect={select} feedback={feedback} />
+      {current.kind === 'question' && (
+        <Question
+          step={progress.current}
+          {...current}
+          options={filtered}
+          onSelect={select}
+          feedback={feedback}
+        />
       )}
 
-      {current.kind === "comment" && (
-        <FinalComment onSubmit={() => select("SUBMIT")} />
-      )}
+      {current.kind === 'comment' && <FinalComment onSubmit={() => select('SUBMIT')} />}
 
-      {current.kind === "final" && <FinalMessage text={current.text} />}
+      {current.kind === 'final' && <FinalMessage text={current.text} />}
 
       <button
         onClick={reset}
         className="mt-6 text-sm text-zinc-400 hover:text-blue-600 hover:underline"
       >
-        Never mind, I don’t want to cancel.
+        Never mind, I don’t want to cancel.
       </button>
     </motion.div>
-  );
-};
+  )
+}
