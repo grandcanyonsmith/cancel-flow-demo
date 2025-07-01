@@ -9,7 +9,7 @@ type Action =
 const persistKey = 'cc360-cancel-flow'
 
 /* ------------------------------- reducer --------------------------------- */
-function reducer(state: State, action: Action): State {
+export function cancelFlowReducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT': {
       const step: Step = steps[state.at]
@@ -55,7 +55,7 @@ const initializer = (): State => {
 }
 
 export function useCancelFlow() {
-  const [state, dispatch] = useReducer(reducer, undefined!, initializer)
+  const [state, dispatch] = useReducer(cancelFlowReducer, undefined!, initializer)
 
   useEffect(() => {
     localStorage.setItem(persistKey, JSON.stringify(state))
