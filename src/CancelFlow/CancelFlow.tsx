@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion'
+import React, { useEffect, useRef } from 'react'
 import { useCancelFlow } from './useCancelFlow'
 import { Question } from './components/Question'
 import { FinalComment } from './components/FinalComment'
 import { FinalMessage } from './components/FinalMessage'
 import { ProgressBar } from './components/ProgressBar'
 import { useToast } from '../Toast'
-import { useEffect, useRef } from 'react'
 
 /* map of answers that contradict each other */
 const contradictions: Record<string, string[]> = {

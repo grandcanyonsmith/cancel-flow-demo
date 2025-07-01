@@ -40,7 +40,7 @@ export default defineWorkspace([
       }),
     ],
     test: {
-      name: 'storybook',
+      name: 'storybook-playwright',
       browser: {
         enabled: true,
         headless: true,
