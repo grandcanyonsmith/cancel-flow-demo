@@ -4,6 +4,8 @@ import { Question } from './components/Question'
 import { FinalComment } from './components/FinalComment'
 import { FinalMessage } from './components/FinalMessage'
 import { ProgressBar } from './components/ProgressBar'
+import { useToast } from '../Toast'
+import { useEffect, useRef } from 'react'
 
 /* map of answers that contradict each other */
 const contradictions: Record<string, string[]> = {
@@ -15,6 +17,8 @@ const contradictions: Record<string, string[]> = {
 
 export const CancelFlow: React.FC = () => {
   const { current, feedback, progress, select, reset } = useCancelFlow()
+  const toast = useToast()
+  const lastFinalId = useRef<string | null>(null)
 
   const filtered =
     current.kind === 'question'
@@ -23,6 +27,14 @@ export const CancelFlow: React.FC = () => {
           return !(reason && contradictions[reason]?.includes(opt))
         })
       : []
+
+  // fire toast on reaching a final step (canceled/paused)
+  useEffect(() => {
+    if (current.kind === 'final' && lastFinalId.current !== current.id) {
+      toast(current.text)
+      lastFinalId.current = current.id
+    }
+  }, [current, toast])
 
   return (
     <motion.div

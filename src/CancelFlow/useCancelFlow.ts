@@ -14,7 +14,7 @@ function reducer(state: State, action: Action): State {
     case 'SELECT': {
       const step: Step = steps[state.at]
 
-      // only QuestionStep has `.next`
+      // Question step
       if (step.kind === 'question') {
         const nextId = (step as QuestionStep).next(
           action.answer,
@@ -26,7 +26,13 @@ function reducer(state: State, action: Action): State {
         }
       }
 
-      // if somehow SELECT is dispatched on final/comment, stay put
+      // Comment step – we ignore the answer value and just move to next
+      if (step.kind === 'comment') {
+        const nextId = step.next() as StepID
+        return { at: nextId, feedback: state.feedback }
+      }
+
+      // For final steps, remain (no further steps)
       return state
     }
 
