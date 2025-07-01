@@ -14,7 +14,7 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["react", "vitest", "vite/client"],
+    "types": ["node", "react", "vitest", "vite/client"],
 
     /* Linting */
     "strict": true,
