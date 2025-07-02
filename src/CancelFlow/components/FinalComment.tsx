@@ -1,12 +1,18 @@
-import React, { useState } from "react";
-export const FinalComment: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => {
-  const [txt, setTxt] = useState("");
+import React, { useState } from 'react'
+export const FinalComment: React.FC<{ onSubmit: () => void }> = ({
+  onSubmit,
+}) => {
+  const [txt, setTxt] = useState('')
   return (
     <div>
-      <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Any final thoughts?</h2>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+        Any final thoughts?
+      </h2>
       <textarea
         value={txt}
-        onChange={(e) => setTxt(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+          setTxt(e.target.value)
+        }
         rows={4}
         className="w-full resize-none rounded-lg border p-3 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
       />
@@ -17,5 +23,5 @@ export const FinalComment: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) =
         Submit & Cancel
       </button>
     </div>
-  );
-};
+  )
+}
