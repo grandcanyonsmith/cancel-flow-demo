@@ -10,17 +10,11 @@ type Theme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: Theme
+  toggleTheme: () => void
+  setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext)
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
-}
 
 interface ThemeProviderProps {
   children: ReactNode
@@ -28,18 +22,35 @@ interface ThemeProviderProps {
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Always start with system preference
+    // Check localStorage first, then fall back to system preference
+    const stored = localStorage.getItem('theme') as Theme | null
+    if (stored && (stored === 'light' || stored === 'dark')) {
+      return stored
+    }
     return window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light'
   })
 
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
   useEffect(() => {
-    // Listen for system theme changes
+    // Save theme preference to localStorage
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    // Listen for system theme changes only if no user preference is stored
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const handleChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? 'dark' : 'light')
+      // Only auto-switch if user hasn't manually set a preference
+      const hasStoredPreference = localStorage.getItem('theme')
+      if (!hasStoredPreference) {
+        setTheme(e.matches ? 'dark' : 'light')
+      }
     }
 
     mediaQuery.addEventListener('change', handleChange)
@@ -56,6 +67,17 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   }, [theme])
 
   return (
-    <ThemeContext.Provider value={{ theme }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
   )
+}
+
+// Separate the hook export to fix React Fast Refresh warning
+export const useTheme = () => {
+  const context = useContext(ThemeContext)
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider')
+  }
+  return context
 }

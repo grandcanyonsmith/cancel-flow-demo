@@ -66,7 +66,8 @@ const initializer = (): State => {
 
 export function useCancelFlow() {
   const [state, dispatch] = useReducer(reducer, undefined!, initializer)
-  const { showSuccess, showError } = useToast()
+  const { showSuccess, showError, showInfo, showLoading, dismissToast } =
+    useToast()
 
   // Validate flow paths on initialization
   useEffect(() => {
@@ -97,6 +98,9 @@ export function useCancelFlow() {
       return
     }
 
+    // Show loading state for transitions
+    const loadingToast = showLoading('Processing your selection...')
+
     if (currentStep.kind === 'question') {
       try {
         const nextId = (currentStep as QuestionStep).next(
@@ -106,32 +110,77 @@ export function useCancelFlow() {
 
         // Validate next step exists
         if (!steps[nextId]) {
+          dismissToast(loadingToast)
           showError('Invalid flow configuration')
           return
         }
 
-        // Only show toasts when reaching final completion states
-        if (nextId === 'canceled') {
-          showSuccess('Subscription canceled successfully')
-        } else if (nextId === 'paused') {
-          showSuccess('Subscription paused successfully')
-        }
+        // Dismiss loading toast after a short delay to show progress
+        setTimeout(() => {
+          dismissToast(loadingToast)
+
+          // Show contextual feedback based on the selection and next step
+          if (currentStep.id === 'reason') {
+            showInfo(`Feedback recorded: "${answer}"`)
+          } else if (currentStep.id === 'praise') {
+            if (answer === "Many things – I'll be back") {
+              showInfo('Great! Let us explore pausing your subscription')
+            } else if (answer === 'Helpful support') {
+              showInfo('We would love to chat more about this!')
+            } else {
+              showInfo('Thank you for the feedback')
+            }
+          } else if (currentStep.id === 'pause') {
+            if (answer === 'Pause my subscription') {
+              showSuccess('Subscription paused for 2 months!')
+            } else {
+              showInfo('Proceeding with cancellation')
+            }
+          } else if (currentStep.id === 'chat') {
+            if (answer === "Yes, let's chat") {
+              showInfo('We will connect you with our support team')
+            } else {
+              showInfo('Proceeding with cancellation')
+            }
+          }
+
+          // Show final completion toasts
+          if (nextId === 'canceled') {
+            setTimeout(
+              () => showSuccess('Subscription canceled successfully'),
+              500,
+            )
+          } else if (nextId === 'paused') {
+            setTimeout(
+              () => showSuccess('Subscription paused successfully'),
+              500,
+            )
+          }
+        }, 800)
       } catch (error) {
+        dismissToast(loadingToast)
         console.error('Error processing selection:', error)
         showError('An error occurred processing your selection')
         return
       }
     } else if (currentStep.kind === 'comment') {
       // Show completion toast when submitting comment (which leads to canceled)
-      showSuccess(
-        'Thank you for your feedback! Subscription canceled successfully',
-      )
+      setTimeout(() => {
+        dismissToast(loadingToast)
+        showSuccess(
+          'Thank you for your feedback! Subscription canceled successfully',
+        )
+      }, 800)
     }
 
-    dispatch({ type: 'SELECT', answer })
+    // Dispatch the action after a short delay to allow for smooth transitions
+    setTimeout(() => {
+      dispatch({ type: 'SELECT', answer })
+    }, 300)
   }
 
   const reset = () => {
+    showInfo('Flow reset - starting over')
     dispatch({ type: 'RESET' })
   }
 
