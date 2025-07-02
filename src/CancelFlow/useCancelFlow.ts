@@ -4,9 +4,7 @@ import { useToast } from '../contexts/ToastContext'
 import { validateFlowPaths } from './flowValidation'
 
 type State = { at: StepID; feedback: Feedback }
-type Action =
-  | { type: 'SELECT'; answer: string }
-  | { type: 'RESET' }
+type Action = { type: 'SELECT'; answer: string } | { type: 'RESET' }
 
 const persistKey = 'cc360-cancel-flow'
 
@@ -21,15 +19,15 @@ function reducer(state: State, action: Action): State {
         try {
           const nextId = (step as QuestionStep).next(
             action.answer,
-            state.feedback
+            state.feedback,
           ) as StepID
-          
+
           // Validate that the next step exists
           if (!steps[nextId]) {
             console.error(`Invalid next step: ${nextId}`)
             return state // Stay in current state if next step is invalid
           }
-          
+
           return {
             at: nextId,
             feedback: { ...state.feedback, [step.id]: action.answer },
@@ -68,17 +66,17 @@ const initializer = (): State => {
 
 export function useCancelFlow() {
   const [state, dispatch] = useReducer(reducer, undefined!, initializer)
-  const { showSuccess, showInfo, showError } = useToast()
+  const { showSuccess, showError } = useToast()
 
   // Validate flow paths on initialization
   useEffect(() => {
     const validation = validateFlowPaths()
-    
+
     if (!validation.isValid) {
       console.error('Flow validation errors:', validation.errors)
       showError('Flow configuration error detected')
     }
-    
+
     if (validation.warnings.length > 0) {
       console.warn('Flow validation warnings:', validation.warnings)
     }
@@ -93,54 +91,26 @@ export function useCancelFlow() {
 
   const select = (answer: string) => {
     const currentStep = steps[state.at]
-    
+
     if (!currentStep) {
       showError('Invalid step state')
       return
     }
-    
-    // Show appropriate toast based on the action
+
     if (currentStep.kind === 'question') {
       try {
-        const nextId = (currentStep as QuestionStep).next(answer, state.feedback)
-        
+        const nextId = (currentStep as QuestionStep).next(
+          answer,
+          state.feedback,
+        )
+
         // Validate next step exists
         if (!steps[nextId]) {
           showError('Invalid flow configuration')
           return
         }
-        
-        // Show specific toasts based on the flow
-        switch (state.at) {
-          case 'reason':
-            showInfo(`Feedback recorded: ${answer}`)
-            break
-          case 'praise':
-            if (answer === 'Many things – I\'ll be back') {
-              showInfo('Great! Let\'s explore pausing your subscription')
-            } else if (answer === 'Helpful support') {
-              showInfo('We\'d love to chat more about this!')
-            } else {
-              showInfo('Thank you for the feedback')
-            }
-            break
-          case 'pause':
-            if (answer === 'Pause my subscription') {
-              showSuccess('Subscription paused for 2 months!')
-            } else {
-              showInfo('Proceeding with cancellation')
-            }
-            break
-          case 'chat':
-            if (answer === 'Yes, let\'s chat') {
-              showInfo('We\'ll connect you with our support team')
-            } else {
-              showInfo('Proceeding with cancellation')
-            }
-            break
-        }
-        
-        // Show final state toasts
+
+        // Only show toasts when reaching final completion states
         if (nextId === 'canceled') {
           showSuccess('Subscription canceled successfully')
         } else if (nextId === 'paused') {
@@ -152,14 +122,16 @@ export function useCancelFlow() {
         return
       }
     } else if (currentStep.kind === 'comment') {
-      showSuccess('Thank you for your feedback!')
+      // Show completion toast when submitting comment (which leads to canceled)
+      showSuccess(
+        'Thank you for your feedback! Subscription canceled successfully',
+      )
     }
-    
+
     dispatch({ type: 'SELECT', answer })
   }
 
   const reset = () => {
-    showInfo('Flow reset - starting over')
     dispatch({ type: 'RESET' })
   }
 
