@@ -51,7 +51,7 @@ export const CancelFlow: React.FC = () => {
 
       <button
         onClick={reset}
-        className="mt-6 text-sm text-zinc-400 hover:text-blue-600 hover:underline dark:text-zinc-500 dark:hover:text-blue-400"
+        className="mt-6 text-sm text-zinc-400 hover:text-blue-600 hover:underline dark:text-zinc-300 dark:hover:text-blue-400"
       >
         Never mind, I don't want to cancel.
       </button>

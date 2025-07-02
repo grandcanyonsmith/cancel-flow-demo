@@ -12,7 +12,7 @@ export const ThemeToggle = () => {
       {theme === 'light' ? (
         // Moon icon for dark mode
         <svg
-          className="h-5 w-5 text-zinc-700"
+          className="h-5 w-5 text-zinc-700 dark:text-zinc-300"
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"

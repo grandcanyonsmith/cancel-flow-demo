@@ -34,7 +34,7 @@ export const Question: React.FC<Props> = ({
               className={`w-full rounded-lg border p-3 text-left transition-all duration-200 ${
                 selectedAnswer === o
                   ? 'border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-100'
-                  : 'bg-zinc-50 text-zinc-900 hover:border-blue-500 hover:bg-blue-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-blue-400 dark:hover:bg-zinc-700'
+                  : 'border-zinc-200 bg-zinc-50 text-zinc-900 hover:border-blue-500 hover:bg-blue-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-blue-400 dark:hover:bg-zinc-700'
               }`}
               aria-pressed={selectedAnswer === o}
             >

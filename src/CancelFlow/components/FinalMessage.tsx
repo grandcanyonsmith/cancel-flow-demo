@@ -4,7 +4,7 @@ export const FinalMessage = ({ text }: { text: string }) => (
     <h2 className="mb-4 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
       {text}
     </h2>
-    <p className="text-zinc-500 dark:text-zinc-400">
+    <p className="text-zinc-500 dark:text-zinc-300">
       A confirmation email is on its way.
     </p>
   </div>
