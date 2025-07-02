@@ -29,7 +29,7 @@ export const CancelFlow: React.FC = () => {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="mx-auto mt-10 w-full max-w-xl rounded-2xl border bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+      className="mx-auto mt-10 w-full max-w-xl rounded-2xl border bg-white p-6 text-zinc-900 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
     >
       {progress.total > 1 && <ProgressBar {...progress} />}
 
@@ -51,7 +51,7 @@ export const CancelFlow: React.FC = () => {
 
       <button
         onClick={reset}
-        className="mt-6 text-sm text-zinc-400 hover:text-blue-600 hover:underline"
+        className="mt-6 text-sm text-zinc-500 hover:text-blue-600 hover:underline dark:text-zinc-400"
       >
         Never mind, I don't want to cancel.
       </button>

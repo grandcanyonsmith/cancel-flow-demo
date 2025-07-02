@@ -10,7 +10,7 @@ type Props = QuestionStep & {
 
 export const Question: React.FC<Props> = ({ prompt, options, onSelect }) => (
   <>
-    <h2 className="mb-4 text-xl font-semibold">{prompt}</h2>
+    <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{prompt}</h2>
     <ul className="space-y-3">
       {options.map((o) => (
         <motion.li
@@ -20,7 +20,7 @@ export const Question: React.FC<Props> = ({ prompt, options, onSelect }) => (
         >
           <button
             onClick={() => onSelect(o)}
-            className="w-full rounded-lg border bg-zinc-50 p-3 text-left hover:border-blue-500 hover:bg-blue-50 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-400 dark:hover:bg-zinc-700"
+            className="w-full rounded-lg border bg-zinc-50 p-3 text-left text-zinc-900 hover:border-blue-500 hover:bg-blue-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-blue-400 dark:hover:bg-zinc-700"
           >
             {o}
           </button>
