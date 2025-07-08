@@ -1,20 +1,611 @@
-# amplify.yml
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - corepack enable            # makes pnpm@latest available
-        - corepack prepare pnpm@latest --activate
-        - pnpm install --frozen-lockfile
-    build:
-      commands:
-        - pnpm run build
-  artifacts:
-    baseDirectory: dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-      - ~/.pnpm-store/**/*   # speeds up subsequent builds
+<script>
+(function() {
+  "use strict";
+
+  /*=============================================
+   * CONFIG & GLOBALS
+   =============================================*/
+  var debug = false; // Toggle for console.debug logs
+  var cutoffDateString = "2025-03-03T00:20:44.858Z"; // The date to hide "Get Started" link if older
+
+  // For convenience
+  function log() {
+    if (debug) {
+      console.log.apply(console, arguments);
+    }
+  }
+
+  // Check if script is already injected by ID or by SRC
+  function isScriptAlreadyLoaded(options) {
+    if (options.id && document.getElementById(options.id)) {
+      return true;
+    }
+    if (options.src) {
+      var existing = document.querySelector('script[src="' + options.src + '"]');
+      if (existing) return true;
+    }
+    return false;
+  }
+
+  // Promise-based loader that checks if script is already injected
+  function loadScriptOnce(options) {
+    return new Promise(function(resolve, reject) {
+      if (!options.src && !options.innerHTML) {
+        reject("No script source or innerHTML provided.");
+        return;
+      }
+      // If already loaded, resolve immediately
+      if (isScriptAlreadyLoaded(options)) {
+        log("Script already loaded:", options.src || options.id);
+        resolve();
+        return;
+      }
+
+      var script = document.createElement('script');
+      if (options.id) script.id = options.id;
+      if (options.src) script.src = options.src;
+      script.async = options.async !== false; // default true
+      script.defer = options.defer !== false; // default true
+
+      if (options.innerHTML) {
+        script.textContent = options.innerHTML;
+      }
+
+      script.onload = function() {
+        log("Loaded script:", options.src || options.id);
+        resolve();
+      };
+      script.onerror = function(err) {
+        console.error("Failed to load script:", options.src, err);
+        reject(err);
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  // Helper: get locationId from URL
+  function getLocationIdFromUrl() {
+    var match = window.location.href.match(/location\/([^\/]*)/);
+    return match ? match[1] : null;
+  }
+
+  // Hide "Get Started" link if user date <= cutoff
+  function maybeHideGetStarted(details) {
+    var dateCutoff = new Date(cutoffDateString);
+    var userDate = new Date(details.date_added);
+    if (userDate <= dateCutoff) {
+      var getStartedLink = document.getElementById('739b3ff6-ab98-4bf6-89aa-424902629503');
+      if (getStartedLink) {
+        getStartedLink.style.display = 'none';
+        log("'Get Started' link hidden by date condition");
+      }
+    }
+  }
+
+  // Identify user with Userpilot (retries until loaded)
+  function identifyUserpilot(details) {
+    if (window.__userpilotIdentified) {
+      log("Userpilot already identified this session. Skipping.");
+      return;
+    }
+
+    function attempt() {
+      if (window.userpilot && typeof window.userpilot.identify === 'function') {
+        // Example placeholders. Replace with real GHL tokens or data.
+        var userId = '{{user.email}}'; 
+        var userTraits = {
+          name: '{{user.name}}',
+          email: '{{user.email}}',
+          company: {
+            id: details.locationId,
+            name: details.name,
+            subscription_status: details.subscription_status,
+            subscription_id: details.subscription_id,
+            price_id: details.price_id,
+            created_at: details.date_added
+          }
+        };
+        window.userpilot.identify(userId, userTraits);
+        window.__userpilotIdentified = true; // set global flag
+        log("Userpilot identified:", userId);
+      } else {
+        setTimeout(attempt, 200);
+      }
+    }
+    attempt();
+  }
+
+  // Start ProfitWell (retries until loaded)
+  function startProfitWell(stripeCustomerId) {
+    if (!stripeCustomerId) {
+      log("No Stripe Customer ID found. Skipping ProfitWell start.");
+      return;
+    }
+
+    function attempt() {
+      if (window.profitwell) {
+        window.profitwell('start', { 'user_id': stripeCustomerId });
+        log("ProfitWell started with user_id:", stripeCustomerId);
+      } else {
+        setTimeout(attempt, 200);
+      }
+    }
+    attempt();
+  }
+
+  // Change the site favicon
+  function changeFavicon(url) {
+    var link = document.querySelector("link[rel='icon']") || document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = url;
+    document.head.appendChild(link);
+    log("Favicon updated to:", url);
+  }
+
+  // Optionally cache location details in sessionStorage
+  // to avoid multiple calls if user navigates within GHL
+  function getCachedLocationDetails(locationId) {
+    try {
+      var data = sessionStorage.getItem("location_details_" + locationId);
+      if (!data) return null;
+      return JSON.parse(data);
+    } catch (e) {
+      return null;
+    }
+  }
+  function setCachedLocationDetails(locationId, details) {
+    try {
+      sessionStorage.setItem("location_details_" + locationId, JSON.stringify(details));
+    } catch (e) {
+      // do nothing if storage fails
+    }
+  }
+
+  /*=============================================
+   * 1. Immediate, Non-Blocking Setup
+   =============================================*/
+  // Change the Favicon (no need for extra script)
+  changeFavicon("https://storage.googleapis.com/msgsndr/c2DjRsOo4e13Od6ZTU6S/media/6794d3af252fad9fb78fd9d4.png");
+
+  // Prepare GTranslate wrapper + settings up front
+  (function setupGTranslate() {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'gtranslate_wrapper';
+    document.body.appendChild(wrapper);
+
+    window.gtranslateSettings = {
+      default_language: "en",
+      languages: ["en", "fr", "de", "it", "es", "ar"],
+      wrapper_selector: ".gtranslate_wrapper",
+      flag_size: 16
+    };
+  })();
+
+  /*=============================================
+   * 2. Load External Scripts in Parallel
+   *    (Except Axios, which we need for the location call)
+   =============================================*/
+  var nonDependentPromises = [
+    // Unified script
+    loadScriptOnce({
+      src: "https://authservice.getextendly.com/api/unified-script?access-key=pak_5643dcf7352d38-6643dcf7352d39-7643dcf7352d3a-8643dcf7352d3b&host=" 
+           + window.location.hostname 
+           + "&path=" + window.location.pathname
+    }),
+
+    // Consolidata
+    loadScriptOnce({
+      src: "https://ms1.consolidata.ai/ghl-dashboard-script.js?key=eyJpdiI6IlZyYlBtTllYSnVvbTcvTUJBb1VIRXc9PSIsInZhbHVlIjoidjNrTVh6RktnNVFHcHEzWmJLelYzUT09IiwibWFjIjoiMDM3YjAwNDc2NjFjYmJhNGYyMDA2NjQ0ZjI2MWY5OGU5NDZlODkzYmIxNmIzZDdkZTY3ZTQ1OTVmNzEyZDJkMSIsInRhZyI6IiJ9&ver=1706547468"
+    }),
+
+    // GTranslate
+    loadScriptOnce({
+      src: "https://cdn.gtranslate.net/widgets/latest/dwf.js"
+    }),
+
+    // Paddle
+    loadScriptOnce({
+      src: "https://cdn.paddle.com/paddle/v2/paddle.js"
+    }).then(function() {
+      if (window.Paddle) {
+        window.Paddle.Initialize({
+          token: 'live_c392da64e3154d2ae3b42f2ce12'
+        });
+        log("Paddle initialized");
+      }
+    }),
+
+    // Userpilot
+    loadScriptOnce({
+      src: "https://js.userpilot.io/sdk/latest.js"
+    }).then(function() {
+      // Provide userpilot settings once loaded
+      window.userpilotSettings = { token: "NX-e8076889" };
+      log("Userpilot script loaded");
+    }),
+
+    // ProfitWell inline script
+    loadScriptOnce({
+      id: "profitwell-js",
+      innerHTML: [
+        "(function(i,s,o,g,r,a,m){",
+        "i[o]=i[o]||function(){ (i[o].q=i[o].q||[]).push(arguments) };",
+        "a=s.createElement(g); m=s.getElementsByTagName(g)[0];",
+        "a.async=1;",
+        "a.src=r+'?auth='+ s.getElementById(o+'-js').getAttribute('data-pw-auth');",
+        "m.parentNode.insertBefore(a,m);",
+        "})(window, document, 'profitwell', 'script', 'https://public.profitwell.com/js/profitwell.js');"
+      ].join("\n")
+    }).then(function() {
+      // Add data-pw-auth attribute
+      var el = document.getElementById("profitwell-js");
+      if (el) el.setAttribute("data-pw-auth", "c1a75f18d387612f62f2185329dbf6b6");
+      log("ProfitWell script appended");
+    })
+  ];
+
+  /*=============================================
+   * 3. Load Axios (Separately) → Then fetch location details
+   =============================================*/
+  var axiosPromise = loadScriptOnce({
+    src: "https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"
+  }).then(function() {
+    log("Axios ready");
+  });
+
+  // Once Axios loads, fetch location details (if locationId found)
+  axiosPromise.then(function() {
+    var locationId = getLocationIdFromUrl();
+    if (!locationId) {
+      log("No location ID found in URL. Skipping location data request.");
+      return;
+    }
+
+    // Check sessionStorage for existing data
+    var cached = getCachedLocationDetails(locationId);
+    if (cached) {
+      log("Using cached location details for:", locationId);
+      handleLocationDetails(cached);
+      return;
+    }
+
+    // Otherwise, make the API call
+    axios.post(
+      "https://q3kvfvzyguneqs5esd67ifflqa0mulfg.lambda-url.us-west-2.on.aws/",
+      { company_id: locationId, location_id: locationId }
+    )
+    .then(function(response) {
+      var details = response.data;
+      details.locationId = locationId; // ensure we store the ID for reference
+      // cache it
+      setCachedLocationDetails(locationId, details);
+      // handle data
+      handleLocationDetails(details);
+    })
+    .catch(function(err) {
+      console.error("Error fetching location details:", err);
+    });
+  });
+
+  // Once we have location details, do all the post-fetch tasks
+  function handleLocationDetails(details) {
+    // 1) Hide "Get Started" if needed
+    maybeHideGetStarted(details);
+
+    // 2) Identify user in Userpilot
+    identifyUserpilot(details);
+
+    // 3) Start ProfitWell
+    startProfitWell(details.customer_id);
+  }
+
+  /*=============================================
+   * 4. Optional: Do something once all scripts are loaded
+   =============================================*/
+  Promise.all(nonDependentPromises).then(function() {
+    log("All non-dependent scripts loaded successfully.");
+    // ...
+  }).catch(function(error) {
+    console.error("Error loading one or more scripts:", error);
+  });
+
+})();
+</script>
+
+
+i edited this and now it says profitwell not loaded / found
+
+this is the old script that used to work for it
+Current GHL JS script
+
+<!-- ============================================ -->
+<!-- 1) FIRST SCRIPT BLOCK (IIFE)                 -->
+<!-- ============================================ -->
+<script type="text/javascript">
+(function () {
+  // ---------------------------------------------
+  // Step 1: Unified Script
+  // ---------------------------------------------
+  var uri = "https://authservice.getextendly.com/api/unified-script?access-key=pak_5643dcf7352d38-6643dcf7352d39-7643dcf7352d3a-8643dcf7352d3b&host="
+    + window.location.hostname
+    + "&path=" + window.location.pathname;
+  var script_tag = document.createElement('script');
+  script_tag.setAttribute('src', uri);
+  document.head.appendChild(script_tag);
+  console.log('Unified script loaded:', uri);
+
+  // ---------------------------------------------
+  // Step 2: Change Favicon Script
+  // ---------------------------------------------
+  function changeFavicon(url) {
+    const favicon = document.querySelector("link[rel='icon']") || document.createElement('link');
+    favicon.rel = 'icon';
+    favicon.type = 'image/png';
+    favicon.href = url;
+    document.head.appendChild(favicon);
+    console.log('Favicon changed to:', url);
+  }
+  // Usage
+  changeFavicon('https://storage.googleapis.com/msgsndr/c2DjRsOo4e13Od6ZTU6S/media/6794d3af252fad9fb78fd9d4.png');
+  console.log('Favicon script executed');
+
+  // ---------------------------------------------
+  // Step 3: Load Consolidata Script
+  // ---------------------------------------------
+  var cdScript = document.createElement('script');
+  cdScript.id = 'cd-script';
+  cdScript.src = 'https://ms1.consolidata.ai/ghl-dashboard-script.js?key=eyJpdiI6IlZyYlBtTllYSnVvbTcvTUJBb1VIRXc9PSIsInZhbHVlIjoidjNrTVh6RktnNVFHcHEzWmJLelYzUT09IiwibWFjIjoiMDM3YjAwNDc2NjFjYmJhNGYyMDA2NjQ0ZjI2MWY5OGU5NDZlODkzYmIxNmIzZDdkZTY3ZTQ1OTVmNzEyZDJkMSIsInRhZyI6IiJ9&ver=1706547468';
+  cdScript.async = true;
+  cdScript.defer = true;
+  document.head.appendChild(cdScript);
+  console.log('Consolidata script loaded');
+
+  // ---------------------------------------------
+  // Step 4: GTranslate Script
+  // ---------------------------------------------
+  var gtranslateWrapper = document.createElement('div');
+  gtranslateWrapper.className = 'gtranslate_wrapper';
+  document.body.appendChild(gtranslateWrapper);
+
+  window.gtranslateSettings = {
+    "default_language": "en",
+    "languages": ["en", "fr", "de", "it", "es", "ar"],
+    "wrapper_selector": ".gtranslate_wrapper",
+    "flag_size": 16
+  };
+  console.log('GTranslate settings initialized:', window.gtranslateSettings);
+
+  var gtranslateScript = document.createElement('script');
+  gtranslateScript.src = 'https://cdn.gtranslate.net/widgets/latest/dwf.js';
+  gtranslateScript.defer = true;
+  document.head.appendChild(gtranslateScript);
+  console.log('GTranslate script loaded');
+
+  // ---------------------------------------------
+  // Step 5: Extract Location ID and Make API Request
+  // ---------------------------------------------
+  var axiosScript = document.createElement('script');
+  axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
+  document.head.appendChild(axiosScript);
+
+  axiosScript.onload = function() {
+    function getLocationIdFromUrl() {
+      var url = window.location.href;
+      var locationIdMatch = url.match(/location\/([^\/]*)/);
+      return locationIdMatch ? locationIdMatch[1] : null;
+    }
+
+    var locationId = getLocationIdFromUrl();
+    console.log('Extracted Location ID:', locationId);
+
+    if (locationId) {
+      axios.post('https://q3kvfvzyguneqs5esd67ifflqa0mulfg.lambda-url.us-west-2.on.aws/', {
+        company_id: locationId,
+        location_id: locationId
+      })
+      .then(function (response) {
+        var locationDetails = response.data;
+        console.log('Location Details:', locationDetails);
+
+        // ---------------------------
+        // HIDE "Get Started" IF date_added <= 2025-03-03T00:20:44.858Z
+        // ---------------------------
+        var dateCutoff = new Date("2025-03-03T00:20:44.858Z");
+        var userDate = new Date(locationDetails.date_added);
+        if (userDate <= dateCutoff) {
+          var getStartedLink = document.getElementById('739b3ff6-ab98-4bf6-89aa-424902629503');
+          if (getStartedLink) {
+            getStartedLink.style.display = 'none';
+            console.log('Get Started link hidden based on date condition.');
+          }
+        }
+
+        // Next: userpilot identification
+        var companyName = locationDetails.name;
+        var dateAdded = locationDetails.date_added;
+        var userId = '{{user.email}}';
+        var userTraits = {
+          name: '{{user.name}}',
+          email: '{{user.email}}',
+          company: {
+            id: locationId,
+            name: companyName,
+            subscription_status: locationDetails.subscription_status,
+            subscription_id: locationDetails.subscription_id,
+            price_id: locationDetails.price_id,
+            created_at: dateAdded
+          }
+        };
+        console.log('Identifying user with data:', userTraits);
+        userpilot.identify(userId, userTraits);
+
+        // ProfitWell
+        var stripeCustomerId = locationDetails.customer_id;
+        console.log('Initializing ProfitWell with Stripe customer ID:', stripeCustomerId);
+        profitwell('start', { 'user_id': stripeCustomerId });
+      })
+      .catch(function (error) {
+        console.error('Error fetching location details:', error);
+      });
+    } else {
+      console.error('Location ID not found in the URL.');
+    }
+    console.log('Axios script executed');
+  };
+
+  // ---------------------------------------------
+  // Step 6: Userpilot Initialization
+  // ---------------------------------------------
+  window.userpilotSettings = { token: "NX-e8076889" };
+  var userpilotScript = document.createElement('script');
+  userpilotScript.src = 'https://js.userpilot.io/sdk/latest.js';
+  document.head.appendChild(userpilotScript);
+  console.log('Userpilot initialized with token:', window.userpilotSettings.token);
+
+  // ---------------------------------------------
+  // Step 7: ProfitWell Initialization
+  // ---------------------------------------------
+  var profitwellScript = document.createElement('script');
+  profitwellScript.id = 'profitwell-js';
+  profitwellScript.setAttribute('data-pw-auth', 'c1a75f18d387612f62f2185329dbf6b6');
+  profitwellScript.innerHTML = "(function(i, s, o, g, r, a, m) {"
+    + " i[o] = i[o] || function() {"
+    + " (i[o].q = i[o].q || []).push(arguments);"
+    + " };"
+    + " a = s.createElement(g);"
+    + " m = s.getElementsByTagName(g)[0];"
+    + " a.async = 1;"
+    + " a.src = r + '?auth=' + s.getElementById(o + '-js').getAttribute('data-pw-auth');"
+    + " m.parentNode.insertBefore(a, m);"
+    + " console.log('ProfitWell script loaded with auth:', s.getElementById(o + '-js').getAttribute('data-pw-auth'));"
+    + "})(window, document, 'profitwell', 'script', 'https://public.profitwell.com/js/profitwell.js');";
+  document.head.appendChild(profitwellScript);
+  console.log('ProfitWell script loaded');
+
+})();
+</script>
+
+<!-- Paddle Script -->
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script type="text/javascript">
+Paddle.Initialize({ 
+  token: 'live_c392da64e3154d2ae3b42f2ce12' // replace with a client-side token
+});
+</script>
+
+<!-- ============================================ -->
+<!-- 2) SECOND SCRIPT BLOCK                      -->
+<!-- ============================================ -->
+<script>
+console.log('Starting script execution');
+
+// ---------------------------------------------
+// Step 1: Create a dummy script element for ProfitWell
+// ---------------------------------------------
+console.log('Creating dummy script element for ProfitWell');
+var profitwellDummyScript = document.createElement('script');
+profitwellDummyScript.id = 'profitwell-js';
+profitwellDummyScript.setAttribute('data-pw-auth', 'c1a75f18d387612f62f2185329dbf6b6');
+document.head.appendChild(profitwellDummyScript);
+
+// ---------------------------------------------
+// Step 2: Load ProfitWell script
+// ---------------------------------------------
+console.log('Loading ProfitWell script');
+(function(i,s,o,g,r,a,m){
+  i[o]=i[o]||function(){ (i[o].q=i[o].q||[]).push(arguments) };
+  a=s.createElement(g);
+  m=s.getElementsByTagName(g)[0];
+  a.async=1;
+  a.src=r+'?auth='+s.getElementById(o+'-js').getAttribute('data-pw-auth');
+  m.parentNode.insertBefore(a,m);
+})(window,document,'profitwell','script','https://public.profitwell.com/js/profitwell.js');
+
+// ---------------------------------------------
+// Step 3: Load axios script
+// ---------------------------------------------
+console.log('Loading axios script');
+var axiosScript = document.createElement('script');
+axiosScript.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
+document.head.appendChild(axiosScript);
+
+axiosScript.onload = function() {
+  console.log('Axios script loaded');
+
+  // -------------------------------------------
+  // Step 4: Extract Location ID from URL
+  // -------------------------------------------
+  function getLocationIdFromUrl() {
+    console.log('Extracting Location ID from URL');
+    var url = window.location.href;
+    var locationIdMatch = url.match(/location\/([^\/]*)/);
+    return locationIdMatch ? locationIdMatch[1] : null;
+  }
+
+  var locationId = getLocationIdFromUrl();
+  console.log('Extracted Location ID:', locationId);
+
+  if (locationId) {
+    // -----------------------------------------
+    // Step 5: Make API request for location details
+    // -----------------------------------------
+    console.log('Making API request with locationId:', locationId);
+    axios.post('https://q3kvfvzyguneqs5esd67ifflqa0mulfg.lambda-url.us-west-2.on.aws/', {
+      company_id: locationId,
+      location_id: locationId
+    })
+    .then(function (response) {
+      console.log('API response received');
+      var locationDetails = response.data;
+      console.log('locationDetails:', locationDetails);
+
+      // ---------------------------
+      // HIDE "Get Started" IF date_added <= 2025-03-03T00:20:44.858Z
+      // ---------------------------
+      var dateCutoff = new Date("2025-03-03T00:20:44.858Z");
+      var userDate = new Date(locationDetails.date_added);
+      if (userDate <= dateCutoff) {
+        var getStartedLink = document.getElementById('739b3ff6-ab98-4bf6-89aa-424902629503');
+        if (getStartedLink) {
+          getStartedLink.style.display = 'none';
+          console.log('Get Started link hidden based on date condition (2nd script).');
+        }
+      }
+
+      var stripeCustomerId = locationDetails.customer_id;
+      console.log('Stripe Customer ID:', stripeCustomerId);
+
+      // ---------------------------------------
+      // Step 6: Wait for ProfitWell & Start
+      // ---------------------------------------
+      function startProfitWell() {
+        if (typeof profitwell !== 'undefined') {
+          console.log('ProfitWell is ready');
+          console.log('Starting ProfitWell with user_id:', stripeCustomerId);
+          profitwell('start', { 'user_id': stripeCustomerId });
+        } else {
+          console.log('ProfitWell not ready yet, checking again in 100ms');
+          setTimeout(startProfitWell, 100);
+        }
+      }
+      startProfitWell();
+    })
+    .catch(function (error) {
+      console.error('Error in API request:', error);
+    });
+  } else {
+    console.error('Location ID not found in URL');
+  }
+};
+
+axiosScript.onerror = function() {
+  console.error('Failed to load axios script');
+};
+</script>
+
+
+rewrite the and fix the  profitwell thing
+
+rewrite the entire thing dont leave anything out

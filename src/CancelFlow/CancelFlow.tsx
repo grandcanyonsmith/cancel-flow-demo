@@ -1,58 +1,118 @@
-import { motion } from 'framer-motion'
-import { useCancelFlow } from './useCancelFlow'
-import { Question } from './components/Question'
-import { FinalComment } from './components/FinalComment'
-import { FinalMessage } from './components/FinalMessage'
-import { ProgressBar } from './components/ProgressBar'
-
-/* map of answers that contradict each other */
-const contradictions: Record<string, string[]> = {
-  'Not useful right now': ['Easy to use'],
-  'Didn’t see the value': ['Good value'],
-  'Poor support': ['Helpful support'],
-  'Missing features / hard to use': ['Easy to use'],
-}
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useCancelFlow } from './useCancelFlow';
+import { ProgressBar } from './components/ProgressBar';
+import { LossFrame } from './components/LossFrame';
+import { ReasonSurvey } from './components/ReasonSurvey';
+import { OfferPage } from './components/OfferPage';
+import { GoodbyePage } from './components/GoodbyePage';
+import { CancellationConfirmed } from './components/CancellationConfirmed';
+import { getOfferForReason } from './steps';
 
 export const CancelFlow: React.FC = () => {
-  const { current, feedback, progress, select, reset } = useCancelFlow()
+  const { 
+    current, 
+    feedback, 
+    progress, 
+    userData,
+    selectReason,
+    acceptOffer,
+    rejectOffer,
+    keepAccount,
+    finishCancellation,
+    reset 
+  } = useCancelFlow();
 
-  const filtered =
-    current.kind === 'question'
-      ? current.options.filter(opt => {
-          const reason = feedback.reason
-          return !(reason && contradictions[reason]?.includes(opt))
-        })
-      : []
+  const renderCurrentStep = () => {
+    switch (current.kind) {
+      case 'loss-frame':
+        return (
+          <LossFrame
+            userData={userData}
+            onKeepAccount={keepAccount}
+            onContinueCancel={() => selectReason(null)}
+          />
+        );
+
+      case 'reason-survey':
+        return (
+          <ReasonSurvey
+            onReasonSelect={selectReason}
+          />
+        );
+
+      case 'tailored-offer':
+        const firstOffer = getOfferForReason(feedback.reason!, false);
+        return (
+          <OfferPage
+            offer={firstOffer}
+            reason={feedback.reason!}
+            isSecondChance={false}
+            onAccept={() => acceptOffer(firstOffer, false)}
+            onReject={() => rejectOffer(firstOffer, false)}
+          />
+        );
+
+      case 'second-chance-offer':
+        const secondOffer = getOfferForReason(feedback.reason!, true);
+        return (
+          <OfferPage
+            offer={secondOffer}
+            reason={feedback.reason!}
+            isSecondChance={true}
+            onAccept={() => acceptOffer(secondOffer, true)}
+            onReject={() => rejectOffer(secondOffer, true)}
+          />
+        );
+
+      case 'goodbye':
+        return (
+          <GoodbyePage
+            userData={userData}
+            onFinishCancellation={finishCancellation}
+          />
+        );
+
+      case 'cancellation-confirmed':
+        return (
+          <CancellationConfirmed
+            onRedirect={() => {
+              // In a real app, redirect to dashboard or home
+              console.log('Redirecting to dashboard...');
+            }}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="mx-auto mt-10 w-full max-w-xl rounded-2xl border bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+      className="mx-auto mt-10 w-full max-w-2xl rounded-2xl border bg-white p-8 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
     >
-      {progress.total > 1 && <ProgressBar {...progress} />}
-
-      {current.kind === 'question' && (
-        <Question
-          step={progress.current}
-          {...current}
-          options={filtered}
-          onSelect={select}
-          feedback={feedback}
-        />
+      {progress.total > 1 && current.kind !== 'cancellation-confirmed' && (
+        <div className="mb-8">
+          <ProgressBar {...progress} />
+        </div>
       )}
 
-      {current.kind === 'comment' && <FinalComment onSubmit={() => select('SUBMIT')} />}
+      {renderCurrentStep()}
 
-      {current.kind === 'final' && <FinalMessage text={current.text} />}
-
-      <button
-        onClick={reset}
-        className="mt-6 text-sm text-zinc-400 hover:text-blue-600 hover:underline"
-      >
-        Never mind, I don’t want to cancel.
-      </button>
+      {current.kind !== 'cancellation-confirmed' && (
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={reset}
+            className="w-full text-sm text-zinc-400 hover:text-blue-600 hover:underline transition-colors duration-200"
+          >
+            Never mind, I don't want to cancel.
+          </button>
+        </div>
+      )}
     </motion.div>
-  )
-}
+  );
+};
