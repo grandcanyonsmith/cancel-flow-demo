@@ -1,54 +1,136 @@
-# React + TypeScript + Vite
+# BuildMaster Construction - Professional Building Services
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive website for BuildMaster Construction Company, showcasing professional construction services with over 20 years of experience in residential and commercial building projects.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Responsive Design**: Optimized for all devices (mobile, tablet, desktop)
+- **Modern UI**: Clean, professional design using Tailwind CSS
+- **Service Showcase**: Detailed information about construction services
+- **Project Portfolio**: Featured projects with case studies
+- **Client Testimonials**: Customer reviews and satisfaction ratings
+- **Contact Form**: Easy quote request and contact functionality
+- **SEO Optimized**: Meta tags and structured content for search engines
 
-## Expanding the ESLint configuration
+## Services Offered
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Residential Construction**: Custom homes, renovations, and residential additions
+- **Commercial Construction**: Office buildings, retail spaces, and industrial facilities  
+- **Project Management**: Full-service project management from planning to completion
+- **Renovation Services**: Kitchen, bathroom, and complete home renovations
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Technology Stack
+
+- **Frontend**: React 19 with TypeScript
+- **Styling**: Tailwind CSS for responsive design
+- **Build Tool**: Vite for fast development and building
+- **Development**: Hot reload and modern development features
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (version 18 or higher)
+- npm or yarn package manager
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd buildmaster-construction
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+2. Install dependencies:
+```bash
+npm install
 ```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist` directory.
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+## Project Structure
+
+```
+src/
+├── App.tsx          # Main application component
+├── main.tsx         # Application entry point
+├── index.css        # Global styles with Tailwind CSS
+└── assets/          # Static assets
+```
+
+## Key Sections
+
+### Header & Navigation
+- Company branding and logo
+- Navigation menu with smooth scrolling
+- Contact information and call-to-action
+
+### Hero Section
+- Compelling headline and value proposition
+- Call-to-action buttons
+- Professional background design
+
+### Services Section
+- Three main service categories
+- Detailed service descriptions
+- Visual icons and formatting
+
+### About Section
+- Company history and experience
+- Key statistics and achievements
+- Team information
+
+### Projects Section
+- Featured project showcase
+- Project categories and completion dates
+- Visual project representations
+
+### Testimonials Section
+- Customer reviews and ratings
+- Client information and companies
+- Star ratings and feedback
+
+### Contact Section
+- Contact form for quote requests
+- Business contact information
+- Operating hours and location
+
+### Footer
+- Company information and links
+- Social media integration
+- Copyright and legal information
+
+## Contact Information
+
+**BuildMaster Construction**
+- Phone: (555) 123-4567
+- Email: info@buildmaster.com
+- Address: 123 Construction Ave, Building City, BC 12345
+- Hours: Monday-Friday 7:00 AM - 6:00 PM, Saturday 8:00 AM - 4:00 PM
+
+## License
+
+This project is proprietary software for BuildMaster Construction Company.
+
+---
+
+*Building Dreams Into Reality* - BuildMaster Construction
